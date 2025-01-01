@@ -167,15 +167,60 @@
 
 ---
 
-#### **5. Prochaines étapes**
+#### **5. Configuration et sécurisation de SSH**
 
-- **Mise en place de la sécurité** :
-  - Installation et configuration d'un VPN WireGuard pour un accès sécurisé au serveur.
-  - Renforcement de la configuration SSH (changement de port, authentification par clé uniquement).
+- **Modification du port SSH** :
+  - Dans `/etc/ssh/sshd_config`, modification ou ajout de la ligne :
+    ```
+    Port 2222
+    ```
+  - Autres paramètres configurés :
+    ```
+    PermitRootLogin no
+    PubkeyAuthentication yes
+    PasswordAuthentication no
+    ```
+  - Redémarrage du service SSH :
+    ```bash
+    sudo systemctl restart ssh
+    ```
 
-- **Automatisation avec Ansible** :
-  - Exploration des cas d'usage et création de playbooks pour automatiser les tâches répétitives.
+- **Ajout des règles UFW** :
+  - Installation de UFW :
+    ```bash
+    sudo apt install ufw
+    ```
+  - Ouverture des ports nécessaires :
+    ```bash
+    sudo ufw allow 2222/tcp
+    sudo ufw allow 80/tcp
+    sudo ufw allow 443/tcp
+    ```
+  - Activation du pare-feu :
+    ```bash
+    sudo ufw enable
+    ```
+  - Vérification des règles :
+    ```bash
+    sudo ufw status
+    ```
+
+- **Test de connexion** :
+  - Connexion réussie via :
+    ```bash
+    ssh -p 2222 <user>@<IP_DU_SERVEUR>
+    ```
 
 ---
 
+#### **6. Prochaines étapes**
+
+- **Mise en place de la sécurité externe** :
+  - Installation et configuration d’un VPN WireGuard pour sécuriser l’accès distant.
+  - Renforcement des règles UFW et configuration des certificats SSL/TLS pour Nextcloud.
+
+- **Automatisation avec Ansible** :
+  - Préparation de playbooks pour automatiser les tâches d’administration système.
+
+---
 
