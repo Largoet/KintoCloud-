@@ -213,14 +213,101 @@
 
 ---
 
-#### **6. Prochaines étapes**
+#### **6. Configuration de WireGuard et VPN**
 
-- **Mise en place de la sécurité externe** :
-  - Installation et configuration d’un VPN WireGuard pour sécuriser l’accès distant.
-  - Renforcement des règles UFW et configuration des certificats SSL/TLS pour Nextcloud.
+- **Installation de WireGuard** :
+  - Commandes :
+    ```bash
+    sudo apt install wireguard
+    ```
+  - Création du répertoire :
+    ```bash
+    sudo mkdir -p /etc/wireguard
+    sudo chmod 700 /etc/wireguard
+    ```
+
+- **Génération des clés** :
+  - Clé privée et publique pour le serveur :
+    ```bash
+    wg genkey | sudo tee /etc/wireguard/private.key | wg pubkey | sudo tee /etc/wireguard/public.key
+    ```
+  - Clés pour les clients :
+    ```bash
+    wg genkey | sudo tee /etc/wireguard/client_private.key | wg pubkey | sudo tee /etc/wireguard/client_public.key
+    ```
+
+- **Configuration du serveur (`wg0.conf`)** :
+  - Exemple de configuration :
+    ```
+    [Interface]
+    Address = 10.0.0.1/24
+    ListenPort = 51820
+    PrivateKey = <SERVER_PRIVATE_KEY>
+    PostUp = ufw route allow in on wg0 out on eno1
+    PostDown = ufw route delete allow in on wg0 out on eno1
+    DNS = 1.1.1.1
+
+    [Peer]
+    PublicKey = <CLIENT_PUBLIC_KEY>
+    AllowedIPs = 10.0.0.2/32
+    ```
+
+- **Démarrage de WireGuard** :
+  - Activation et démarrage :
+    ```bash
+    sudo systemctl enable wg-quick@wg0
+    sudo systemctl start wg-quick@wg0
+    ```
+  - Vérification de l'état :
+    ```bash
+    sudo systemctl status wg-quick@wg0
+    ```
+
+- **Configuration des clients (Android)** :
+  - **Problème rencontré** :
+    Lors de la génération des QR codes pour simplifier la configuration des clients, une erreur de permission a été rencontrée. Le fichier de configuration (`android_sony.conf`) n'était pas accessible pour le générateur de QR code.
+
+  - **Solution** :
+    - Vérification et ajustement des permissions :
+      ```bash
+      sudo chown <user>:<group> /etc/wireguard/android_sony.conf
+      sudo chmod 600 /etc/wireguard/android_sony.conf
+      ```
+    - Ajout de l'utilisateur au groupe WireGuard (si nécessaire) :
+      ```bash
+      sudo usermod -aG wireguard <user>
+      ```
+    - Génération réussie du QR code :
+      ```bash
+      qrencode -t ansiutf8 < /etc/wireguard/android_sony.conf
+      ```
+
+  - Exemple de configuration pour Android :
+    ```
+    [Interface]
+    PrivateKey = <ANDROID_PRIVATE_KEY>
+    Address = 10.0.0.2/32
+    DNS = 1.1.1.1
+
+    [Peer]
+    PublicKey = <SERVER_PUBLIC_KEY>
+    Endpoint = <SERVER_PUBLIC_IP>:51820
+    AllowedIPs = 0.0.0.0/0, ::/0
+    PersistentKeepalive = 25
+    ```
+
+---
+
+#### **7. Prochaines étapes**
+
+- **Renforcement de la sécurité** :
+  - Audit des règles UFW et du VPN.
+  - Configuration des certificats SSL/TLS pour Nextcloud.
 
 - **Automatisation avec Ansible** :
   - Préparation de playbooks pour automatiser les tâches d’administration système.
 
 ---
+
+
 
