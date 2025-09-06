@@ -10,7 +10,7 @@ L'objectif est de configurer un serveur à domicile pour stocker des données, p
 
 ## Prérequis
 
-- Un serveur physique ou virtuel avec **Debian** installé.
+- Un serveur physique avec **Debian** installé.
 - Connexion Internet.
 - Quelques disques durs pour configurer le **RAID** (au moins 2 disques).
 - Accès SSH pour configurer le serveur (recommandation de sécurisation via un VPN).
