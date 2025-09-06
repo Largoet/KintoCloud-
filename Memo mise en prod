@@ -1,115 +1,114 @@
-Fiche mémo · Mise en prod Collegium Magistrorum
+# DRAFT — Fiche mémo · Mise en prod Collegium Magistrorum
 
-Préparer le repo (à faire une fois)
+## 0) Préparer le repo (à faire une fois)
+- Dockerfile multi-stage à la racine (même dossier que `package.json`)
+- `.dockerignore` avec : `node_modules`, `dist`, `.git`, `.env`, `.env.*`
+- `package.json` : scripts
+  - `build` : `tsc`
+  - `start` : `node dist/index.js`
+- (option) workflow CI : `.github/workflows/cicd.yml`
 
-Dockerfile multi-stage à la racine (même dossier que package.json)
+---
 
-.dockerignore avec : node_modules, dist, .git, .env, .env.*
+## 1) Construire l’image
 
-package.json : scripts
+### Option A — CI (recommandé)
+- GitHub Actions : lancer le workflow `build-and-push` sur la branche (`dev` ou `main`)
+- Résultat attendu : image disponible sous `ghcr[point]io/largoet/collegium-magistrorum:latest`
 
-build : tsc
-
-start : node dist/index.js
-
-(option) workflow CI : .github/workflows/cicd.yml
-
-Construire l’image
-
-Option A — CI (recommandé)
-
-GitHub Actions : lancer le workflow build-and-push sur la branche (dev ou main)
-
-Résultat attendu : image disponible sous ghcr[point]io/largoet/collegium-magistrorum:latest
-
-Option B — Manuel (en local)
+### Option B — Manuel (en local)
 Login GHCR (si nécessaire) :
-export GHCR_USER=Largoet
-export GHCR_PAT=ghp_xxx
-echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+    export GHCR_USER=Largoet
+    export GHCR_PAT=ghp_xxx
+    echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
 Build & push depuis la racine du projet :
-IMAGE=ghcr.io/largoet/collegium-magistrorum
-TAG=latest
-docker build -t $IMAGE:$TAG .
-docker push $IMAGE:$TAG
+    IMAGE=ghcr.io/largoet/collegium-magistrorum
+    TAG=latest
+    docker build -t $IMAGE:$TAG .
+    docker push $IMAGE:$TAG
 
-Déployer sur le serveur (/opt/collegium-bot)
-./deploy.sh latest
-docker compose logs -f
+---
 
-Mettre à jour (nouveau code)
+## 2) Déployer sur le serveur (`/opt/collegium-bot`)
+    ./deploy.sh latest
+    docker compose logs -f
 
-Pousser sur main (ou lancer le workflow CI)
+---
 
-Puis sur le serveur :
-cd /opt/collegium-bot
-./deploy.sh latest
-docker compose logs -f
+## 3) Mettre à jour (nouveau code)
+- Pousser sur `main` (ou lancer le workflow CI)
+- Puis sur le serveur :
+    cd /opt/collegium-bot
+    ./deploy.sh latest
+    docker compose logs -f
 
-Versionner et rollback
+---
+
+## 4) Versionner et rollback
 Publier une version figée :
-git tag v1.0.0
-git push origin v1.0.0
+    git tag v1.0.0
+    git push origin v1.0.0
 
 Déployer un tag précis (ou rollback vers un ancien tag) :
-cd /opt/collegium-bot
-./deploy.sh v1.0.0
-docker compose logs -f
+    cd /opt/collegium-bot
+    ./deploy.sh v1.0.0
+    docker compose logs -f
 
-Commandes utiles (serveur)
-docker compose ps
-docker compose images
-docker compose logs -f
-docker compose restart
-docker compose exec bot sh
-docker compose down
+---
 
-Sanity checks (serveur)
+## 5) Commandes utiles (serveur)
+    docker compose ps
+    docker compose images
+    docker compose logs -f
+    docker compose restart
+    docker compose exec bot sh
+    docker compose down
+
+---
+
+## 6) Sanity checks (serveur)
 Voir l’image effective interprétée par Compose :
-docker compose config | grep -i image
+    docker compose config | grep -i image
 
 Tester le pull direct du registre :
-docker pull ghcr.io/largoet/collegium-magistrorum:latest
+    docker pull ghcr.io/largoet/collegium-magistrorum:latest
 
-Entretien (à utiliser avec précaution)
-docker ps
-docker images
-docker system df
+---
 
-nettoyage (optionnel, supprime du cache etc.)
+## 7) Entretien (à utiliser avec précaution)
+    docker ps
+    docker images
+    docker system df
+    # nettoyage (optionnel, supprime du cache etc.)
+    docker system prune -f
 
-docker system prune -f
+---
 
-Erreurs fréquentes et remèdes
+## 8) Erreurs fréquentes et remèdes
+- `manifest unknown` : l’image/tag n’existe pas encore.  
+  → Lancer le workflow CI ou faire un build/push manuel, puis relancer `./deploy.sh`.
 
-manifest unknown : l’image/tag n’existe pas encore.
-→ Lancer le workflow CI ou faire un build/push manuel, puis relancer ./deploy.sh.
+- Warnings `IMAGE` / `TAG` non définies :  
+  → Soit mettre l’image en dur dans `compose.yaml` (`image: ghcr.io/largoet/collegium-magistrorum:latest`),  
+  → soit exporter `IMAGE` et `TAG` dans `deploy.sh` et référencer `${IMAGE}:${TAG}` dans `compose.yaml`.
 
-Warnings IMAGE / TAG non définies :
-→ Soit mettre l’image en dur dans compose.yaml (image: ghcr.io/largoet/collegium-magistrorum:latest),
-→ soit exporter IMAGE et TAG dans deploy.sh et référencer ${IMAGE}:${TAG} dans compose.yaml.
+- Bot ne répond pas :  
+  → Vérifier `app.env` (tokens/IDs), relancer `docker compose up -d`,  
+  → lire `docker compose logs -f` et repérer les erreurs d’auth/connexion.
 
-Bot ne répond pas :
-→ Vérifier app.env (tokens/IDs), relancer docker compose up -d,
-→ lire docker compose logs -f et repérer les erreurs d’auth/connexion.
+---
 
-Ordre ultra-court à mémoriser
+## 9) Ordre ultra-court à mémoriser
+1. Coder → push  
+2. CI build/push → image dans GHCR  
+3. Serveur : `./deploy.sh <tag>` → `logs -f`  
+4. Vérifier sur Discord (slash-commands)  
+5. Versionner : `git tag vX.Y.Z` → rollback facile
 
-Coder → push
+---
 
-CI build/push → image dans GHCR
-
-Serveur : ./deploy.sh <tag> → logs -f
-
-Vérifier sur Discord (slash-commands)
-
-Versionner : git tag vX.Y.Z → rollback facile
-
-Astuces copy/paste (si ton éditeur crée des liens)
-
-Coller en texte brut (souvent Ctrl+Shift+V)
-
-Coller d’abord dans un bloc-notes puis re-copier
-
-Casser temporairement les domaines : écrire ghcr[point]io puis remettre le point après collage
+## 10) Astuces copy/paste (si ton éditeur crée des liens)
+- Coller en texte brut (souvent `Ctrl+Shift+V`)
+- Coller d’abord dans un bloc-notes puis re-copier
+- Casser temporairement les domaines : écrire `ghcr[point]io` puis remettre le point après collage
